@@ -1,0 +1,35 @@
+	public function addComment($order_id, $comment) {
+        $order = $this->getOrder($order_id); //получение номера заказа opencart
+		$get_b24_order = $this->getById($order_id); //получение номера связанной сущности б24
+        $b24OrderId = !empty($get_b24_order['b24_order_id']) ? $get_b24_order['b24_order_id'] : '';
+        $typeApi = !empty($get_b24_order['type'] && $get_b24_order['type'] == 2 ? 'deal' : 'lead';//получение типа связанной сущности б24
+		if(empty($b24OrderId)){
+			return;
+		}
+		
+		$status_id = $this->getStatusById($order['order_status_id'], ''); //получение номера статуса заказа opencart
+		
+        
+        $params = [
+            'type' => 'crm.timeline.comment.add',
+            'fields' => [
+                'ENTITY_ID' => $b24OrderId,
+                'ENTITY_TYPE' => $typeApi,
+                'COMMENT' => 'Статус заказа изменен на' . $status_id . '. ' . $comment,
+                
+            ],
+            'params' => [
+            	'REGISTER_SONET_EVENT' => 'Y'
+            ]
+        ];
+
+        $result = $this->b24->callHook($params); //отправка данных в б24
+
+		/* проверка результатов */
+        if (!empty($result['result']['result_error']['order_update'])) {
+            $this->log->write(print_r('Ошибка ' .$result['result']['result_error']['order_update']['error_description'].' при обновлении статуса заказа '.$b24OrderId.' в Битрикс 24 ',true));
+        }
+		if (!empty($result['result']['result_error']['product_update'])) {
+			$this->log->write(print_r('Ошибка ' .$result['result']['result_error']['product_update']['error_description'].' при обновлении статуса заказа '.$b24OrderId.' в Битрикс 24 ',true));
+        }
+	}
